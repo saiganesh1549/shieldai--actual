@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ShieldAI</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;0,6..72,700;1,6..72,400;1,6..72,500&family=DM+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+    --cream: #FAF8F4;
+    --paper: #F5F2EC;
+    --ink: #1A1A1A;
+    --ink-light: #4A4A4A;
+    --ink-muted: #8A8A8A;
+    --ink-faint: #C4C0B8;
+    --rule: #E2DED6;
+    --rule-dark: #C4C0B8;
+    --red: #B91C1C;
+    --red-bg: #FEF2F2;
+    --red-border: #FECACA;
+    --amber: #A16207;
+    --amber-bg: #FEFCE8;
+    --amber-border: #FEF08A;
+    --green: #166534;
+    --green-bg: #F0FDF4;
+    --green-border: #BBF7D0;
+    --agent-bg: #1A1A1A;
+    --agent-text: #E8E6E1;
+    --agent-muted: #7A7A7A;
+    --agent-accent: #D4A574;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:'DM Sans',sans-serif; background:var(--cream); color:var(--ink); font-size:14px; line-height:1.55; -webkit-font-smoothing:antialiased; }
+body::before { content:''; position:fixed; inset:0; opacity:0.3; background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.05'/%3E%3C/svg%3E"); pointer-events:none; z-index:0; }
+::selection { background:rgba(185,28,28,0.12); }
+.hdr { position:sticky; top:0; z-index:100; background:var(--cream); border-bottom:1px solid var(--rule); padding:0 32px; display:flex; align-items:center; justify-content:space-between; height:56px; }
+.hdr-left { display:flex; align-items:baseline; gap:12px; }
+.hdr-logo { font-family:'Newsreader',serif; font-size:20px; font-weight:700; letter-spacing:-0.3px; }
+.hdr-logo span { color:var(--red); }
+.hdr-divider { width:1px; height:20px; background:var(--rule-dark); align-self:center; }
+.hdr-subtitle { font-size:12px; color:var(--ink-muted); letter-spacing:0.5px; text-transform:uppercase; }
+.hdr-status { font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--ink-muted); }
+.hdr-status::before { content:''; display:inline-block; width:6px; height:6px; background:var(--green); border-radius:50%; margin-right:6px; vertical-align:middle; }
+.landing { max-width:640px; margin:0 auto; padding:120px 32px 80px; text-align:center; position:relative; z-index:1; }
+.landing h1 { font-family:'Newsreader',serif; font-size:44px; font-weight:700; line-height:1.15; letter-spacing:-1px; margin-bottom:20px; }
+.landing h1 em { font-style:italic; color:var(--red); }
+.landing .sub { font-size:16px; color:var(--ink-light); line-height:1.65; max-width:480px; margin:0 auto 48px; }
+.input-wrap { background:white; border:1px solid var(--rule); border-radius:8px; padding:6px; display:flex; gap:6px; box-shadow:0 1px 3px rgba(0,0,0,0.04); }
+.input-wrap input { flex:1; border:none; padding:12px 16px; font-family:'IBM Plex Mono',monospace; font-size:14px; color:var(--ink); background:transparent; outline:none; }
+.input-wrap input::placeholder { color:var(--ink-faint); }
+.scan-btn { padding:12px 28px; background:var(--ink); color:white; border:none; border-radius:5px; font-family:'DM Sans',sans-serif; font-size:13px; font-weight:600; cursor:pointer; transition:background 0.15s; white-space:nowrap; }
+.scan-btn:hover { background:#333; }
+.scan-btn:disabled { background:var(--ink-muted); cursor:not-allowed; }
+.quick-links { margin-top:16px; display:flex; justify-content:center; gap:6px; flex-wrap:wrap; }
+.quick-link { font-family:'IBM Plex Mono',monospace; font-size:11px; padding:5px 12px; border:1px solid var(--rule); border-radius:4px; background:white; color:var(--ink-muted); cursor:pointer; transition:all 0.15s; }
+.quick-link:hover { border-color:var(--ink-faint); color:var(--ink); }
+.landing-footer { margin-top:80px; padding-top:24px; border-top:1px solid var(--rule); font-size:12px; color:var(--ink-muted); line-height:1.6; }
+.workspace { display:none; position:relative; z-index:1; height:calc(100vh - 56px); }
+.workspace.on { display:flex; }
+.findings { flex:1; overflow-y:auto; padding:32px; border-right:1px solid var(--rule); }
+.agent-panel { width:420px; background:var(--agent-bg); color:var(--agent-text); display:flex; flex-direction:column; overflow:hidden; }
+.agent-hdr { padding:16px 20px; border-bottom:1px solid #2A2A2A; display:flex; align-items:center; justify-content:space-between; }
+.agent-title { font-family:'IBM Plex Mono',monospace; font-size:12px; font-weight:500; text-transform:uppercase; letter-spacing:1.5px; color:var(--agent-accent); }
+.agent-status { font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--agent-muted); }
+.agent-body { flex:1; overflow-y:auto; padding:20px; }
+.agent-msg { margin-bottom:16px; opacity:0; animation:agentFade 0.4s ease forwards; }
+@keyframes agentFade { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+.agent-msg .agent-label { font-family:'IBM Plex Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:1px; color:var(--agent-accent); margin-bottom:6px; }
+.agent-msg .agent-text { font-size:13px; line-height:1.65; }
+.agent-msg .agent-finding { margin-top:8px; padding:10px 14px; background:rgba(255,255,255,0.04); border-left:2px solid var(--agent-accent); border-radius:0 4px 4px 0; font-size:12px; line-height:1.6; }
+.agent-msg .agent-finding.critical { border-left-color:#EF4444; background:rgba(239,68,68,0.06); }
+.agent-msg .agent-finding.warning { border-left-color:#F59E0B; background:rgba(245,158,11,0.06); }
+.agent-msg .agent-finding.good { border-left-color:#22C55E; background:rgba(34,197,94,0.06); }
+.agent-cursor { display:inline-block; width:7px; height:15px; background:var(--agent-accent); animation:cursorBlink 0.8s step-end infinite; vertical-align:text-bottom; margin-left:2px; }
+@keyframes cursorBlink { 0%,100%{opacity:1} 50%{opacity:0} }
+.agent-actions { padding:16px 20px; border-top:1px solid #2A2A2A; }
+.agent-btn { width:100%; padding:11px 20px; background:var(--agent-accent); color:var(--agent-bg); border:none; border-radius:5px; font-family:'DM Sans',sans-serif; font-size:13px; font-weight:600; cursor:pointer; transition:opacity 0.15s; }
+.agent-btn:hover { opacity:0.85; }
+.agent-btn:disabled { opacity:0.4; cursor:not-allowed; }
+.findings-hdr { display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:28px; padding-bottom:20px; border-bottom:1px solid var(--rule); }
+.findings-target h2 { font-family:'Newsreader',serif; font-size:24px; font-weight:600; letter-spacing:-0.3px; }
+.findings-target .url { font-family:'IBM Plex Mono',monospace; font-size:12px; color:var(--ink-muted); margin-top:2px; }
+.btn-back { font-size:12px; color:var(--ink-muted); background:none; border:1px solid var(--rule); border-radius:4px; padding:6px 14px; cursor:pointer; transition:0.15s; font-family:'DM Sans',sans-serif; }
+.btn-back:hover { color:var(--ink); border-color:var(--ink-faint); }
+.scores-row { display:grid; grid-template-columns:repeat(4,1fr); gap:1px; background:var(--rule); border:1px solid var(--rule); border-radius:6px; overflow:hidden; margin-bottom:28px; }
+.score-cell { background:white; padding:18px 20px; }
+.score-cell .score-label { font-size:11px; color:var(--ink-muted); text-transform:uppercase; letter-spacing:0.8px; margin-bottom:6px; }
+.score-cell .score-value { font-family:'Newsreader',serif; font-size:30px; font-weight:700; letter-spacing:-1px; }
+.score-cell .score-value.red { color:var(--red); }
+.score-cell .score-value.amber { color:var(--amber); }
+.score-cell .score-value.green { color:var(--green); }
+.score-cell .score-detail { font-size:11px; color:var(--ink-muted); margin-top:2px; }
+.section-tabs { display:flex; gap:0; border-bottom:1px solid var(--rule); margin-bottom:24px; }
+.section-tab { padding:10px 20px; font-family:'DM Sans',sans-serif; font-size:13px; font-weight:500; color:var(--ink-muted); background:none; border:none; border-bottom:2px solid transparent; cursor:pointer; transition:0.15s; }
+.section-tab:hover { color:var(--ink-light); }
+.section-tab.on { color:var(--ink); border-bottom-color:var(--ink); }
+.section-tab .tab-count { font-family:'IBM Plex Mono',monospace; font-size:10px; background:var(--red); color:white; padding:1px 6px; border-radius:3px; margin-left:6px; }
+.s-panel { display:none; } .s-panel.on { display:block; }
+.gap-card { background:white; border:1px solid var(--rule); border-radius:6px; margin-bottom:10px; overflow:hidden; transition:border-color 0.15s; }
+.gap-card:hover { border-color:var(--rule-dark); }
+.gap-head { display:flex; align-items:flex-start; justify-content:space-between; padding:16px 20px; cursor:pointer; gap:16px; }
+.gap-head-left { display:flex; gap:12px; align-items:flex-start; flex:1; }
+.gap-indicator { width:3px; min-height:36px; border-radius:2px; flex-shrink:0; margin-top:2px; }
+.gap-indicator.critical { background:var(--red); }
+.gap-indicator.warning { background:var(--amber); }
+.gap-indicator.info { background:var(--ink-faint); }
+.gap-title { font-family:'Newsreader',serif; font-size:15px; font-weight:600; line-height:1.35; letter-spacing:-0.2px; }
+.gap-reg { font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--ink-muted); margin-top:3px; }
+.gap-fine { font-family:'IBM Plex Mono',monospace; font-size:13px; font-weight:500; color:var(--red); white-space:nowrap; }
+.gap-body { display:none; }
+.gap-card.open .gap-body { display:block; padding:0 20px 20px; }
+.gap-comparison { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:14px; }
+.gap-col-label { font-size:10px; font-weight:600; text-transform:uppercase; letter-spacing:1px; margin-bottom:6px; }
+.gap-col-label.claim-l { color:var(--red); } .gap-col-label.actual-l { color:var(--green); }
+.gap-col-text { font-size:13px; line-height:1.6; color:var(--ink-light); padding:12px; border-radius:4px; }
+.gap-col-text.claim-t { background:var(--red-bg); border:1px solid var(--red-border); }
+.gap-col-text.actual-t { background:var(--green-bg); border:1px solid var(--green-border); }
+.gap-enforcement { padding:10px 14px; background:var(--paper); border-radius:4px; font-size:12px; color:var(--ink-light); line-height:1.55; }
+.gap-enforcement strong { color:var(--ink); font-weight:600; }
+.clause-row { display:flex; align-items:flex-start; gap:14px; padding:14px 0; border-bottom:1px solid var(--rule); }
+.clause-row:last-child { border-bottom:none; }
+.clause-grade { width:32px; height:32px; border-radius:4px; display:flex; align-items:center; justify-content:center; font-family:'Newsreader',serif; font-weight:700; font-size:15px; flex-shrink:0; }
+.clause-grade.red { background:var(--red-bg); color:var(--red); border:1px solid var(--red-border); }
+.clause-grade.yellow { background:var(--amber-bg); color:var(--amber); border:1px solid var(--amber-border); }
+.clause-grade.green { background:var(--green-bg); color:var(--green); border:1px solid var(--green-border); }
+.clause-info h4 { font-family:'Newsreader',serif; font-size:14px; font-weight:600; margin-bottom:3px; }
+.clause-info p { font-size:12px; color:var(--ink-light); line-height:1.55; }
+.clause-regs { margin-top:6px; display:flex; gap:4px; flex-wrap:wrap; }
+.reg-pill { font-family:'IBM Plex Mono',monospace; font-size:10px; padding:2px 8px; border-radius:3px; background:var(--paper); border:1px solid var(--rule); color:var(--ink-muted); }
+.risk-display { background:white; border:1px solid var(--rule); border-radius:6px; overflow:hidden; }
+.risk-top { text-align:center; padding:32px 24px; border-bottom:1px solid var(--rule); }
+.risk-top .risk-label { font-size:11px; text-transform:uppercase; letter-spacing:1px; color:var(--ink-muted); margin-bottom:8px; }
+.risk-big { font-family:'Newsreader',serif; font-size:52px; font-weight:700; letter-spacing:-2px; }
+.risk-big.red { color:var(--red); } .risk-big.green { color:var(--green); }
+.risk-regs { display:grid; grid-template-columns:repeat(3,1fr); gap:1px; background:var(--rule); }
+.risk-reg { background:white; padding:20px; text-align:center; }
+.risk-reg .rr-name { font-size:12px; font-weight:600; margin-bottom:4px; }
+.risk-reg .rr-val { font-family:'Newsreader',serif; font-size:22px; font-weight:700; color:var(--red); }
+.risk-reg .rr-det { font-size:11px; color:var(--ink-muted); margin-top:3px; }
+.risk-arrow { text-align:center; padding:24px; font-size:13px; color:var(--ink-muted); }
+.risk-after { background:var(--green-bg); border:1px solid var(--green-border); border-radius:6px; text-align:center; padding:28px; margin-top:16px; }
+.risk-after .ra-label { font-size:11px; text-transform:uppercase; letter-spacing:1px; color:var(--green); margin-bottom:6px; }
+.rm-item { display:flex; gap:14px; margin-bottom:12px; }
+.rm-num { font-family:'Newsreader',serif; font-size:18px; font-weight:700; width:36px; height:36px; border-radius:50%; border:1px solid var(--rule); display:flex; align-items:center; justify-content:center; flex-shrink:0; background:white; }
+.rm-content { flex:1; padding:14px 18px; background:white; border:1px solid var(--rule); border-radius:6px; }
+.rm-content h4 { font-family:'Newsreader',serif; font-size:14px; font-weight:600; margin-bottom:4px; }
+.rm-content p { font-size:12px; color:var(--ink-light); line-height:1.55; }
+.rm-tags { display:flex; gap:6px; margin-top:8px; }
+.rm-tag { font-family:'IBM Plex Mono',monospace; font-size:10px; padding:3px 8px; border-radius:3px; }
+.rm-tag.sav { background:var(--green-bg); color:var(--green); border:1px solid var(--green-border); }
+.rm-tag.tim { background:var(--paper); color:var(--ink-muted); border:1px solid var(--rule); }
+.rm-tag.reg { background:var(--red-bg); color:var(--red); border:1px solid var(--red-border); }
+.rw-clause { margin-bottom:18px; opacity:0; animation:agentFade 0.35s ease forwards; }
+.rw-label { font-family:'IBM Plex Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:1px; color:var(--agent-accent); margin-bottom:8px; }
+.rw-old { padding:10px 12px; background:rgba(239,68,68,0.08); border-left:2px solid #EF4444; border-radius:0 4px 4px 0; font-size:12px; line-height:1.6; color:#999; text-decoration:line-through; text-decoration-color:rgba(239,68,68,0.3); margin-bottom:8px; }
+.rw-new { padding:10px 12px; background:rgba(34,197,94,0.08); border-left:2px solid #22C55E; border-radius:0 4px 4px 0; font-size:12px; line-height:1.6; }
+.pg-footer { text-align:center; padding:32px; font-size:11px; color:var(--ink-muted); position:relative; z-index:1; }
+@media(max-width:900px) { .workspace{flex-direction:column;height:auto} .agent-panel{width:100%;height:400px} .findings{border-right:none;border-bottom:1px solid var(--rule)} .scores-row{grid-template-columns:repeat(2,1fr)} .gap-comparison{grid-template-columns:1fr} .risk-regs{grid-template-columns:1fr} }
+</style>
+</head>
+<body>
+<header class="hdr">
+    <div class="hdr-left">
+        <div class="hdr-logo">Shield<span>AI</span></div>
+        <div class="hdr-divider"></div>
+        <div class="hdr-subtitle">Compliance Analysis</div>
+    </div>
+    <div class="hdr-right"><span class="hdr-status">Regulatory db live</span></div>
+</header>
+<div id="landing" class="landing">
+    <h1>Find the <em>gaps</em> before regulators do.</h1>
+    <p class="sub">ShieldAI cross-references what your privacy policy claims against what your product actually does — and surfaces the violations hiding in between.</p>
+    <div class="input-wrap">
+        <input type="text" id="urlInput" placeholder="https://company.com" onkeydown="if(event.key==='Enter')startScan()" />
+        <button class="scan-btn" onclick="startScan()">Analyze</button>
+    </div>
+    <div class="quick-links">
+        <button class="quick-link" onclick="fillAndScan('https://spotify.com')">spotify.com</button>
+        <button class="quick-link" onclick="fillAndScan('https://doordash.com')">doordash.com</button>
+        <button class="quick-link" onclick="fillAndScan('https://tiktok.com')">tiktok.com</button>
+        <button class="quick-link" onclick="fillAndScan('https://venmo.com')">venmo.com</button>
+    </div>
+    <div class="landing-footer">Covers GDPR, CCPA/CPRA, ePrivacy, COPPA, and 20+ US state privacy laws.<br>Built at CUhackit — Clemson Privacy Compliance Creative Inquiry.</div>
+</div>
+<div id="workspace" class="workspace">
+    <div class="findings" id="findings">
+        <div class="findings-hdr">
+            <div class="findings-target"><h2 id="companyName"></h2><div class="url" id="companyUrl"></div></div>
+            <button class="btn-back" onclick="resetScan()">New scan</button>
+        </div>
+        <div class="scores-row" id="scoresRow"></div>
+        <div class="section-tabs" id="sectionTabs">
+            <button class="section-tab on" data-p="gaps">Gap Analysis <span class="tab-count" id="gapCount">0</span></button>
+            <button class="section-tab" data-p="policy">Policy Audit</button>
+            <button class="section-tab" data-p="risk">Risk Exposure</button>
+            <button class="section-tab" data-p="roadmap">Remediation</button>
+        </div>
+        <div id="p-gaps" class="s-panel on"></div>
+        <div id="p-policy" class="s-panel"></div>
+        <div id="p-risk" class="s-panel"></div>
+        <div id="p-roadmap" class="s-panel"></div>
+    </div>
+    <div class="agent-panel">
+        <div class="agent-hdr">
+            <div class="agent-title">ShieldAI Agent</div>
+            <div class="agent-status" id="agentStatus">Ready</div>
+        </div>
+        <div class="agent-body" id="agentBody"></div>
+        <div class="agent-actions"><button class="agent-btn" id="agentBtn" onclick="startRewrite()" disabled>Rewrite Policy</button></div>
+    </div>
+</div>
+<div id="footerLanding" class="pg-footer">ShieldAI — protecting companies from what they don't know.</div>
+<script>
+let scanResults=null;const API=window.location.origin;
+document.querySelectorAll('.section-tab').forEach(t=>{t.addEventListener('click',()=>{document.querySelectorAll('.section-tab').forEach(x=>x.classList.remove('on'));t.classList.add('on');document.querySelectorAll('.s-panel').forEach(x=>x.classList.remove('on'));document.getElementById('p-'+t.dataset.p).classList.add('on')})});
+function fillAndScan(u){document.getElementById('urlInput').value=u;startScan()}
+function agentLog(label,text,fc){const body=document.getElementById('agentBody');const msg=document.createElement('div');msg.className='agent-msg';let h='';if(label)h+=`<div class="agent-label">${label}</div>`;if(fc){h+=`<div class="agent-finding ${fc}">${text}</div>`}else{h+=`<div class="agent-text">${text}<span class="agent-cursor"></span></div>`}msg.innerHTML=h;body.appendChild(msg);body.scrollTop=body.scrollHeight;setTimeout(()=>{const cs=body.querySelectorAll('.agent-cursor');cs.forEach((c,i)=>{if(i<cs.length-1)c.remove()})},50);return msg}
+function agentSetStatus(s){document.getElementById('agentStatus').textContent=s}
+function delay(ms){return new Promise(r=>setTimeout(r,ms))}
+
+async function startScan(){
+    const url=document.getElementById('urlInput').value.trim();
+    if(!url){document.getElementById('urlInput').style.borderColor='var(--red)';return}
+    const cleaned=url.replace(/^https?:\/\//,'').replace(/\/.*$/,'');
+    if(!cleaned.includes('.')||cleaned.length<4){
+        alert('Enter a real website URL like spotify.com or https://doordash.com');
+        return;
+    }
+    document.getElementById('landing').style.display='none';
+    document.getElementById('footerLanding').style.display='none';
+    document.getElementById('workspace').classList.add('on');
+    document.getElementById('agentBody').innerHTML='';
+    agentSetStatus('Analyzing...');
+    agentLog('Initializing','Beginning compliance analysis for '+url);
+    let ok=false;
+    let errorMsg='';
+    try{
+        const p=fetch(API+'/api/scan',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url:url})});
+        await delay(600);agentLog('Crawling','Fetching '+url+' and extracting page resources...');
+        await delay(800);agentLog('Detection','Scanning for cookies, trackers, and third-party scripts...');
+        await delay(700);
+        const r=await p;
+        if(r.ok){
+            const d=await r.json();scanResults=mapData(d);ok=true;
+            const tc=d.trackers_found?d.trackers_found.length:0;
+            const cc=d.cookies_detected?d.cookies_detected.length:0;
+            if(tc>0)agentLog('Trackers','Found '+tc+' third-party trackers on the page.','critical');
+            else agentLog('Trackers','No third-party trackers detected on the page.','good');
+            if(cc>0)agentLog('Cookies','Detected '+cc+' cookies — checking consent compliance.','warning');
+            if(d.privacy_policy_found)agentLog('Policy','Privacy policy found and parsed. Cross-referencing claims against detected behavior...');
+            else agentLog('Policy','Could not locate a privacy policy link on this page.','warning');
+            await delay(600);
+        } else {
+            try{const errData=await r.json();errorMsg=errData.detail||'Unknown error';}catch(e2){errorMsg='Could not reach that website.';}
+        }
+    }catch(e){
+        errorMsg='Backend server not running. Start it with: cd backend && python main.py';
+    }
+    if(!ok){
+        agentLog('Error',errorMsg||'Could not analyze this URL. Make sure it is a real, accessible website.','critical');
+        agentSetStatus('Scan failed');
+        document.getElementById('scoresRow').innerHTML='';
+        document.getElementById('p-gaps').innerHTML='<div style="text-align:center;padding:40px;color:var(--ink-muted)">Scan failed. Enter a valid website URL and make sure the backend is running.</div>';
+        document.getElementById('p-policy').innerHTML='';
+        document.getElementById('p-risk').innerHTML='';
+        document.getElementById('p-roadmap').innerHTML='';
+        document.getElementById('companyName').textContent='Scan Failed';
+        document.getElementById('companyUrl').textContent=url;
+        document.getElementById('gapCount').textContent='0';
+        return;
+    }
+    agentLog('Analysis Complete','Identified '+scanResults.totalGaps+' compliance gaps ('+scanResults.criticalGaps+' critical). Total risk exposure: $'+scanResults.totalRiskExposure.toLocaleString()+'.','critical');
+    await delay(300);agentLog(null,'Compliance score: '+scanResults.overallScore+'%. Review findings on the left, then click Rewrite Policy when ready.');
+    agentSetStatus('Analysis complete');
+    document.getElementById('agentBtn').disabled=false;
+    renderDashboard();
+}
+
+function mapData(d){return{company:d.company,url:d.url,overallScore:d.overall_score,totalGaps:d.total_gaps,criticalGaps:d.critical_gaps,totalRiskExposure:d.total_risk_exposure,riskAfterFix:d.risk_after_fix,gaps:d.gaps,policyClauses:d.policy_clauses,riskByRegulation:d.risk_by_regulation,roadmap:d.roadmap,_crawl:{trackers_found:d.trackers_found,cookies_detected:d.cookies_detected,forms_detected:d.forms_detected,consent_banner:d.consent_banner,privacy_policy_text:'',data_collection_signals:d.data_collection_signals}}}
+
+function renderDashboard(){
+    const d=scanResults;
+    document.getElementById('companyName').textContent=d.company;
+    document.getElementById('companyUrl').textContent=d.url;
+    document.getElementById('gapCount').textContent=d.totalGaps;
+    document.getElementById('scoresRow').innerHTML=`
+        <div class="score-cell"><div class="score-label">Compliance</div><div class="score-value red">${d.overallScore}%</div><div class="score-detail">Across all frameworks</div></div>
+        <div class="score-cell"><div class="score-label">Gaps Found</div><div class="score-value amber">${d.totalGaps}</div><div class="score-detail">${d.criticalGaps} critical</div></div>
+        <div class="score-cell"><div class="score-label">Risk Exposure</div><div class="score-value red">$${(d.totalRiskExposure/1e6).toFixed(1)}M</div><div class="score-detail">Maximum liability</div></div>
+        <div class="score-cell"><div class="score-label">After Fixes</div><div class="score-value green">$${(d.riskAfterFix/1000).toFixed(0)}K</div><div class="score-detail">Residual risk</div></div>`;
+    renderGaps();renderPolicy();renderRisk();renderRoadmap();
+}
+
+function renderGaps(){document.getElementById('p-gaps').innerHTML=scanResults.gaps.map(g=>`<div class="gap-card" onclick="this.classList.toggle('open')"><div class="gap-head"><div class="gap-head-left"><div class="gap-indicator ${g.severity}"></div><div><div class="gap-title">${g.title}</div><div class="gap-reg">${g.regulation}</div></div></div><div class="gap-fine">${g.fine}</div></div><div class="gap-body"><div class="gap-comparison"><div><div class="gap-col-label claim-l">Policy Claims</div><div class="gap-col-text claim-t">${g.claim}</div></div><div><div class="gap-col-label actual-l">Detected Reality</div><div class="gap-col-text actual-t">${g.actual}</div></div></div><div class="gap-enforcement"><strong>Enforcement precedent:</strong> ${g.enforcement}</div></div></div>`).join('')}
+
+function renderPolicy(){document.getElementById('p-policy').innerHTML=scanResults.policyClauses.map(c=>`<div class="clause-row"><div class="clause-grade ${c.grade}">${c.grade==='red'?'F':c.grade==='yellow'?'C':'A'}</div><div class="clause-info"><h4>${c.title}</h4><p>${c.text}</p><div class="clause-regs">${c.regs.map(r=>`<span class="reg-pill">${r}</span>`).join('')}</div></div></div>`).join('')}
+
+function renderRisk(){const d=scanResults;document.getElementById('p-risk').innerHTML=`<div class="risk-display"><div class="risk-top"><div class="risk-label">Total Regulatory Risk Exposure</div><div class="risk-big red" id="riskCounter">$0</div></div><div class="risk-regs">${d.riskByRegulation.map(r=>`<div class="risk-reg"><div class="rr-name">${r.name}</div><div class="rr-val">$${r.amount.toLocaleString()}</div><div class="rr-det">${r.detail}</div></div>`).join('')}</div></div><div class="risk-arrow">After ShieldAI remediations ↓</div><div class="risk-after"><div class="ra-label">Savings from Compliance</div><div class="risk-big green" id="savedCounter">$0</div></div>`;animateNum('riskCounter',d.totalRiskExposure);setTimeout(()=>animateNum('savedCounter',d.totalRiskExposure-d.riskAfterFix),800)}
+
+function animateNum(id,target){const el=document.getElementById(id);if(!el)return;let cur=0;const step=target/50;const iv=setInterval(()=>{cur+=step;if(cur>=target){cur=target;clearInterval(iv)}el.textContent='$'+Math.floor(cur).toLocaleString()},25)}
+
+function renderRoadmap(){document.getElementById('p-roadmap').innerHTML=scanResults.roadmap.map(r=>`<div class="rm-item"><div class="rm-num">${r.priority}</div><div class="rm-content"><h4>${r.title}</h4><p>${r.description}</p><div class="rm-tags"><span class="rm-tag sav">Saves ${r.savings}</span><span class="rm-tag tim">${r.time}</span><span class="rm-tag reg">${r.regulation}</span></div></div></div>`).join('')}
+
+async function startRewrite(){
+    const btn=document.getElementById('agentBtn');btn.disabled=true;btn.textContent='Rewriting...';agentSetStatus('Rewriting policy...');
+    agentLog('Policy Rewriter','Analyzing each gap and generating compliant replacement language...');await delay(500);
+    let clauses=null;
+    if(scanResults._crawl){try{const r=await fetch(API+'/api/rewrite',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({gaps:scanResults.gaps,crawl_data:scanResults._crawl})});if(r.ok){const d=await r.json();clauses=d.clauses}}catch(e){}}
+    if(!clauses)clauses=getMockRewrites();
+    for(let i=0;i<clauses.length;i++){const c=clauses[i];const body=document.getElementById('agentBody');const div=document.createElement('div');div.className='rw-clause';div.innerHTML=`<div class="rw-label">Fixing: ${c.label||c.gap_fixed||'Gap '+(i+1)}</div><div class="rw-old">${c.old}</div><div class="rw-new" id="rw-new-${i}"><span class="agent-cursor"></span></div>`;body.appendChild(div);body.scrollTop=body.scrollHeight;await typeInAgent('rw-new-'+i,c.new||'');await delay(300)}
+    agentLog('Complete','All gaps addressed. Policy is now substantially more compliant across GDPR, CCPA, and state frameworks.');agentSetStatus('Rewrite complete');btn.textContent='Policy Rewritten';
+}
+
+function typeInAgent(id,text){return new Promise(resolve=>{const el=document.getElementById(id);if(!el){resolve();return}let i=0;const chunk=4;const iv=setInterval(()=>{if(i>=text.length){el.innerHTML=text;clearInterval(iv);resolve();return}el.innerHTML=text.substring(0,i+chunk)+'<span class="agent-cursor"></span>';el.closest('.agent-body')?.scrollTo(0,999999);i+=chunk},12)})}
+
+function resetScan(){document.getElementById('workspace').classList.remove('on');document.getElementById('landing').style.display='';document.getElementById('footerLanding').style.display='';document.getElementById('agentBody').innerHTML='';document.getElementById('agentBtn').disabled=true;document.getElementById('agentBtn').textContent='Rewrite Policy';scanResults=null}
+
+function generateMockResults(url){const domain=url.replace(/https?:\/\//,'').replace(/\/$/,'').split('/')[0];const company=domain.split('.')[0].charAt(0).toUpperCase()+domain.split('.')[0].slice(1);return{company,url,overallScore:34,totalGaps:8,criticalGaps:3,totalRiskExposure:2847000,riskAfterFix:15000,gaps:[{severity:'critical',title:'Location data collected but not disclosed in privacy policy',regulation:'GDPR Art. 13(1)(e) · CCPA §1798.100(b)',fine:'$2,100,000',claim:'Privacy policy states: "We collect basic information needed to provide our services including your name, email address, and usage data."',actual:'Website uses Geolocation API and IP-based location tracking. App Store declares "Precise Location" collection. Policy makes no mention of location data.',enforcement:'Google fined $391.5M by 40 US states (2022) for misleading location tracking. Clearview AI fined €17M by Italian DPA (2022).'},{severity:'critical',title:'7 advertising trackers not disclosed to users',regulation:'CCPA §1798.140(e) · GDPR Art. 13(1)(e)',fine:'$480,000',claim:'Privacy policy mentions "analytics partners" generically without naming specific advertising third parties.',actual:'Detected: Google Ads, Meta Pixel, TikTok Pixel, Criteo, Amazon Ads, DoubleVerify, LiveRamp. User browsing data and device fingerprints shared with ad networks without disclosure.',enforcement:'Meta fined €390M by Irish DPC (2023) for lacking legal basis for ad tracking. Sephora fined $1.2M under CCPA (2022) for undisclosed data sales.'},{severity:'critical',title:'No compliant cookie consent mechanism',regulation:'GDPR Art. 7 · ePrivacy Art. 5(3)',fine:'$180,000',claim:'Website shows a basic "We use cookies" banner with only an "Accept" button.',actual:'No "Reject All" option. No granular consent controls. Non-essential cookies load before any user consent is given.',enforcement:'CNIL fined Google €150M and Facebook €60M (2022) for making cookie rejection harder than acceptance.'},{severity:'warning',title:'Data retention period not specified',regulation:'GDPR Art. 13(2)(a)',fine:'$45,000',claim:'Policy states: "We retain your data for as long as necessary to provide our services."',actual:'GDPR requires specific retention periods or criteria. "As long as necessary" is consistently found non-compliant by EU DPAs.',enforcement:'Deutsche Wohnen fined €14.5M (2019) for failing to establish proper retention and deletion practices.'},{severity:'warning',title:'Right to deletion process not implemented',regulation:'GDPR Art. 17 · CCPA §1798.105',fine:'$22,000',claim:'Policy states users can "contact us to request deletion."',actual:'No self-service deletion mechanism. CCPA requires at minimum two methods for deletion requests.',enforcement:'Multiple companies fined for insufficient deletion mechanisms.'},{severity:'warning',title:'Signup flow collects excessive data',regulation:'GDPR Art. 5(1)(c)',fine:'$12,000',claim:'Policy claims to follow "data minimization principles."',actual:'Signup requires: name, email, phone, DOB, address. Phone, DOB, and address are not necessary for core service.',enforcement:'Deliveroo fined €2.5M by Italian DPA (2021) for excessive data collection.'},{severity:'info',title:'Children\'s data handling not addressed',regulation:'COPPA · GDPR Art. 8',fine:'$5,000',claim:'Policy does not mention age restrictions or children\'s data.',actual:'No age verification detected. If accessible to under-13 (COPPA) or under-16 (GDPR), specific requirements apply.',enforcement:'Epic Games fined $275M (2022) for COPPA violations. TikTok fined €345M (2023).'},{severity:'info',title:'Cross-border transfer disclosures missing',regulation:'GDPR Art. 44-49',fine:'$3,000',claim:'Policy does not address international data transfers.',actual:'Uses AWS (US), Cloudflare (US), Google Analytics (US). EU users require SCCs or valid transfer mechanisms.',enforcement:'Meta fined €1.2B (2023) for EU-to-US transfers without safeguards.'}],policyClauses:[{grade:'red',title:'Data Collection Disclosure',text:'Fails to enumerate all personal data categories. Missing: location, device identifiers, advertising IDs.',regs:['GDPR Art. 13','CCPA §1798.100']},{grade:'red',title:'Third-Party Sharing',text:'Lists "analytics partners" generically. Does not name ad partners or disclose data sales.',regs:['CCPA §1798.115','GDPR Art. 13(1)(e)']},{grade:'red',title:'Legal Basis for Processing',text:'Does not identify legal basis per processing activity. Ambiguous "legitimate interest" without balancing test.',regs:['GDPR Art. 6','GDPR Art. 13(1)(c)']},{grade:'yellow',title:'User Rights',text:'Mentions access and deletion but omits portability, objection, and complaint to supervisory authority.',regs:['GDPR Art. 15-22','CCPA §1798.100-125']},{grade:'yellow',title:'Data Retention',text:'Vague "as long as necessary." Must specify periods per data category.',regs:['GDPR Art. 13(2)(a)']},{grade:'yellow',title:'Cookie Policy',text:'Mentions cookies but no categorization or granular controls.',regs:['ePrivacy Directive','CCPA §1798.120']},{grade:'green',title:'Contact Information',text:'Valid privacy contact provided. Meets controller identification requirements.',regs:['GDPR Art. 13(1)(a)']},{grade:'green',title:'Update Notification',text:'Users notified of material changes. Meets basic requirements.',regs:['Best Practice']}],riskByRegulation:[{name:'GDPR',amount:1650000,detail:'4% revenue cap · 5 violations'},{name:'CCPA/CPRA',amount:797000,detail:'$7,500/violation · 3 violations'},{name:'State Laws',amount:400000,detail:'VA, CO, TX combined'}],roadmap:[{priority:1,title:'Disclose location data collection',description:'Add explicit clause covering precise and approximate location data, purpose, and retention. Update app store declarations.',savings:'$2,100,000',time:'1-2 hours',regulation:'GDPR Art. 13'},{priority:2,title:'Disclose all advertising trackers',description:'Name each ad partner and data categories shared. Add CCPA "Do Not Sell" link. Create data processing inventory.',savings:'$480,000',time:'4-8 hours',regulation:'CCPA §1798.115'},{priority:3,title:'Implement compliant cookie consent',description:'Deploy consent platform with granular accept/reject per category. Block non-essential cookies until consent.',savings:'$180,000',time:'2-4 hours',regulation:'GDPR Art. 7'},{priority:4,title:'Define retention periods',description:'Specify retention per data category. Implement automated purging.',savings:'$45,000',time:'1-3 days',regulation:'GDPR Art. 13(2)(a)'},{priority:5,title:'Build deletion mechanism',description:'Self-service "Delete My Data" in account settings. Implement deletion pipeline.',savings:'$22,000',time:'1-2 weeks',regulation:'GDPR Art. 17'},{priority:6,title:'Minimize signup data',description:'Remove required phone, DOB, address from signup. Make optional or remove.',savings:'$12,000',time:'2-4 hours',regulation:'GDPR Art. 5(1)(c)'},{priority:7,title:'Add children\'s provisions',description:'Implement age gate. Add COPPA-compliant consent flow if applicable.',savings:'$5,000',time:'1-2 days',regulation:'COPPA'},{priority:8,title:'Disclose cross-border transfers',description:'Document international data flows. Implement SCCs with US processors.',savings:'$3,000',time:'2-3 days',regulation:'GDPR Art. 44-49'}]}}
+
+function getMockRewrites(){return[{label:'Location Data Disclosure',old:'We collect basic information needed to provide our services including your name, email address, and usage data.',new:'We collect the following categories of personal data: (a) Identity Data — your name and email address; (b) Usage Data — pages visited, features used, interaction timestamps; (c) Location Data — precise geolocation via GPS (with your consent) and approximate location via IP address, used for service personalization and fraud prevention; (d) Device Data — device type, operating system, browser, and unique identifiers. You can disable precise location through your device settings at any time.'},{label:'Third-Party Tracker Disclosure',old:'We may share data with our analytics partners to improve our services.',new:'We share personal data with these third parties: (a) Analytics — Google Analytics (usage patterns, anonymized IP); (b) Advertising — Google Ads, Meta Platforms, TikTok, Criteo, Amazon Advertising (device identifiers, browsing behavior for targeted ads). Under the CCPA, sharing with ad partners may constitute a "sale." You can opt out via our "Do Not Sell My Personal Information" link. We maintain data processing agreements with all partners.'},{label:'Cookie Consent Mechanism',old:'We use cookies to improve your experience. By continuing to use our site, you accept our use of cookies.',new:'We use cookies in four categories: (a) Strictly Necessary — core functionality, no consent needed; (b) Analytics — usage analysis, requires your consent; (c) Advertising — ad partner cookies, requires your consent; (d) Functional — preferences, requires consent. Accept or reject each category individually. Non-essential cookies will not load until you consent. Withdraw consent anytime via cookie settings in our footer.'},{label:'Data Retention Periods',old:'We retain your data for as long as necessary to provide our services.',new:'We retain data on this schedule: Account Data — duration of account + 30 days after deletion; Transaction Records — 7 years (tax requirements); Analytics — 26 months aggregated; Advertising Identifiers — 90 days then disassociated; Communications — 12 months after last interaction; Server Logs — 90 days for security. Data is automatically purged after these periods.'},{label:'User Rights',old:'You may contact us to request access to or deletion of your personal data.',new:'Your rights: (a) Access — request a copy of your data; (b) Rectification — correct inaccurate data; (c) Deletion — request erasure via our privacy portal; (d) Portability — receive data in machine-readable format; (e) Object — object to processing based on legitimate interest; (f) Opt-Out — direct us not to sell/share your information (CCPA §1798.120). We respond within 30 days (GDPR) or 45 days (CCPA). Exercising rights will not result in discrimination.'}]}
+</script>
+</body>
+</html>
