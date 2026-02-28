@@ -1,10 +1,48 @@
 """
 ShieldAI — Website Crawler
-Scans a website and detects trackers, cookies, data collection forms,
-consent banners, and third-party scripts.
+============================
+Scans a website and extracts all privacy-relevant information.
 
-Key improvement: also fetches common subpages (privacy policy, terms)
-and checks script src URLs for tracker domains, not just inline HTML.
+This module does the actual "detective work":
+1. Fetches the homepage HTML
+2. Searches for trackers in 4 ways:
+   - Raw HTML text matching (e.g., "google-analytics.com" in the source)
+   - Inline script function calls (e.g., gtag(), fbq(), ttq.)
+   - Script src URLs (e.g., <script src="...googletagmanager.com...">)
+   - Tracking pixels (1x1 images from tracker domains)
+3. Detects cookies from response headers
+4. Finds and fetches the privacy policy page (tries 20+ common URL paths)
+5. Detects consent banners and checks for GDPR compliance issues
+6. Crawls signup/login pages for additional trackers and form fields
+
+It does NOT execute JavaScript (no headless browser), so JS-heavy SPAs
+may show fewer trackers than actually exist. This is a known limitation.
+============================
+Scans a website and extracts all privacy-relevant information.
+
+WHAT IT DOES:
+1. Fetches the homepage HTML
+2. Detects trackers by checking 4 places:
+   - Inline <script> content for tracker function calls (gtag, fbq, ttq, etc.)
+   - <script src="..."> URLs for known tracker domains
+   - <img> tags for tracking pixels (1x1 pixel images)
+   - <link rel="preconnect"> tags for tracker domain pre-connections
+3. Collects cookies from HTTP response headers
+4. Finds and parses forms (signup, login) to detect data collection fields
+5. Detects cookie consent banners and checks for GDPR compliance (reject button, etc.)
+6. Finds the privacy policy by:
+   - Looking for links in the page HTML matching "privacy" patterns
+   - Trying 20+ common URL paths (/privacy, /legal/privacy, etc.)
+   - Validating the page actually contains privacy language (not a redirect)
+7. Fetches and parses the privacy policy text for later analysis
+8. Also crawls subpages (signup, login) to find additional trackers
+
+KEY DESIGN DECISIONS:
+- Uses GET instead of HEAD for path checking (many sites don't support HEAD)
+- Verifies privacy pages contain actual policy text before accepting them
+- Extracts text from <main>/<article> tags first for cleaner output
+- Checks Set-Cookie headers directly (catches more cookies than parser)
+- Cross-references third-party script domains against known tracker signatures
 """
 
 import re

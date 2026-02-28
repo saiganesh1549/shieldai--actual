@@ -1,12 +1,37 @@
 """
 ShieldAI — Gap Analyzer
-Detects gaps between what a privacy policy claims and what
-the website/product actually does.
+========================
+This is the brain of ShieldAI's compliance detection.
 
-CORE RULE: Only flag a gap if we have EVIDENCE on BOTH sides.
-- We detected something (tracker, cookie, form field, signal)
-- AND the policy either doesn't mention it or contradicts it
-- If we couldn't find the policy, we say so — we do NOT assume violations.
+WHAT IT DOES:
+  Takes the raw crawl data (trackers, cookies, consent banner, policy text)
+  and identifies specific compliance gaps — places where the website's
+  actual behavior doesn't match what the privacy policy claims.
+
+CORE RULE — EVIDENCE-BASED ONLY:
+  We only flag a gap if we have EVIDENCE on BOTH sides:
+    1. We DETECTED something (a tracker, a cookie, a form field)
+    2. AND the policy either doesn't mention it or contradicts it
+  
+  If we couldn't find the policy → we say "could not determine"
+  If we didn't detect any trackers → we DON'T flag tracker gaps
+  We NEVER assume violations without proof.
+
+GAP CATEGORIES:
+  1. Undisclosed advertising trackers (detected ad trackers not named in policy)
+  2. Undisclosed analytics tools (detected analytics not named in policy)
+  3. Cookie consent issues (banner missing reject option, etc.)
+  4. Location tracking (geolocation API detected)
+  5. Session recording (Hotjar/Clarity/FullStory detected)
+  6. Data retention (policy doesn't specify retention periods) — ONLY if we have policy
+  7. Missing user rights (policy missing required rights) — ONLY if we have policy
+  8. Cross-border transfers (US trackers + no transfer disclosure) — ONLY if we have policy
+  9. Children's data (no children section) — ONLY if we have policy
+  10. Excessive form fields (requiring unnecessary data)
+
+RISK CALCULATION:
+  Each gap has an estimated financial risk based on typical regulatory fines.
+  These are conservative estimates, not guaranteed fine amounts.
 """
 
 from knowledge_base import find_relevant_cases
@@ -287,4 +312,4 @@ def analyze_gaps(crawl_data: dict, policy_analysis: dict | None = None) -> dict:
             {"name": "State Laws", "amount": state_risk, "detail": "VA CDPA, CO CPA, TX TDPSA combined"},
         ],
         "compliance_score": max(5, 100 - (gap_count * 9) - (critical_count * 8)) if gap_count > 0 else (85 if has_policy else 0),
-    } 
+    }

@@ -1,14 +1,41 @@
 """
 ShieldAI — Tracker & Regulation Knowledge Base
-Contains known trackers, enforcement cases, and regulatory frameworks.
+================================================
+This file is our "database" of known trackers and real enforcement cases.
+
+TRACKER_SIGNATURES:
+  A dictionary of known third-party tracker domains and what they do.
+  When the crawler finds one of these domains in a website's HTML/scripts,
+  it can immediately identify the tracker by name, category, and what data it collects.
+  
+  Format: "domain_signature": {"name": "Human Name", "cat": "category", "data": [...]}
+  
+  Categories:
+    - advertising: Ad networks that track users for targeted ads
+    - analytics: Tools that measure user behavior  
+    - tag_management: Tools that load other scripts (like GTM)
+    - customer_data: CRM/chat tools that store user info
+    - social: Social media embeds
+
+ENFORCEMENT_CASES:
+  Real enforcement actions taken by regulators against companies.
+  Used to show users "this is what happened to Company X for the same violation."
+  Every case is real — company, fine amount, year, and authority are factual.
+
+find_relevant_cases():
+  Given a list of violation tags (e.g., ["advertising", "consent"]),
+  finds the most relevant enforcement cases to cite.
 """
 
 # ============================================================
 # KNOWN THIRD-PARTY TRACKERS
+# Each entry maps a domain substring → tracker info
+# When crawler finds this domain in HTML/scripts, it flags it
 # ============================================================
 
 TRACKER_SIGNATURES = {
-    # --- Advertising ---
+    # --- Advertising Trackers ---
+    # These collect user data for targeted advertising
     "google-analytics.com": {"name": "Google Analytics", "cat": "analytics", "data": ["page views", "user behavior", "device info", "IP address"]},
     "googletagmanager.com": {"name": "Google Tag Manager", "cat": "tag_management", "data": ["page views", "events", "user interactions"]},
     "googlesyndication.com": {"name": "Google Ads", "cat": "advertising", "data": ["browsing behavior", "device ID", "ad interactions"]},
@@ -36,7 +63,8 @@ TRACKER_SIGNATURES = {
     "doubleverify.com": {"name": "DoubleVerify", "cat": "advertising", "data": ["ad viewability", "brand safety metrics"]},
     "demdex.net": {"name": "Adobe Audience Manager", "cat": "advertising", "data": ["audience segments", "device IDs"]},
 
-    # --- Analytics ---
+    # --- Analytics Tools ---
+    # These measure how users interact with the site
     "hotjar.com": {"name": "Hotjar", "cat": "analytics", "data": ["mouse movements", "clicks", "scrolling", "session recordings"]},
     "clarity.ms": {"name": "Microsoft Clarity", "cat": "analytics", "data": ["session recordings", "heatmaps", "click patterns"]},
     "mixpanel.com": {"name": "Mixpanel", "cat": "analytics", "data": ["user events", "funnels", "user properties"]},
@@ -49,7 +77,8 @@ TRACKER_SIGNATURES = {
     "sentry.io": {"name": "Sentry", "cat": "analytics", "data": ["error reports", "stack traces", "user context"]},
     "plausible.io": {"name": "Plausible", "cat": "analytics", "data": ["page views (privacy-friendly, no cookies)"]},
 
-    # --- Customer Data ---
+    # --- Customer Data Platforms ---
+    # These collect user identity and interaction data for CRM/support
     "intercom.io": {"name": "Intercom", "cat": "customer_data", "data": ["user identity", "chat messages", "behavioral data"]},
     "zendesk.com": {"name": "Zendesk", "cat": "customer_data", "data": ["support tickets", "user identity"]},
     "hubspot.com": {"name": "HubSpot", "cat": "customer_data", "data": ["form submissions", "email tracking", "CRM data"]},
@@ -57,14 +86,16 @@ TRACKER_SIGNATURES = {
     "salesforce.com": {"name": "Salesforce", "cat": "customer_data", "data": ["CRM data", "user interactions"]},
     "drift.com": {"name": "Drift", "cat": "customer_data", "data": ["chat messages", "user identity", "browsing behavior"]},
 
-    # --- Social ---
+    # --- Social Media Embeds ---
     "platform.twitter.com": {"name": "Twitter Embed", "cat": "social", "data": ["page views", "user preferences"]},
     "platform.instagram.com": {"name": "Instagram Embed", "cat": "social", "data": ["page views"]},
     "apis.google.com": {"name": "Google APIs", "cat": "social", "data": ["authentication data"]},
 }
 
 # ============================================================
-# ENFORCEMENT CASES DATABASE
+# REAL ENFORCEMENT CASES
+# Every case here is a real fine issued by a real regulator.
+# We cite these when we find similar violations on scanned sites.
 # ============================================================
 
 ENFORCEMENT_CASES = [
@@ -168,11 +199,26 @@ ENFORCEMENT_CASES = [
 
 
 def find_relevant_cases(tags: list[str], limit: int = 2) -> list[dict]:
-    """Find enforcement cases matching given violation tags."""
+    """
+    Find enforcement cases that match the given violation tags.
+    
+    How it works:
+    1. For each case, count how many of our search tags match the case's tags
+    2. Sort by most matches first, then by largest fine
+    3. Return the top N cases
+    
+    Example: find_relevant_cases(["advertising", "consent"]) 
+    → Returns Meta €390M case and Amazon €746M case (both match advertising + consent)
+    """
     scored = []
     for case in ENFORCEMENT_CASES:
+        # Count overlapping tags between what we're looking for and this case
         overlap = len(set(tags) & set(case["tags"]))
         if overlap > 0:
             scored.append((overlap, case))
+
+    # Sort: most tag matches first, then largest fine first
     scored.sort(key=lambda x: (-x[0], -x[1]["fine_usd"]))
-    return [c for _, c in scored[:limit]]
+
+    # Return just the case dicts (not the scores)
+    return [c for _, c in scored[:limit]] 
