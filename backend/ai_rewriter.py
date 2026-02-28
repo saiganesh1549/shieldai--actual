@@ -35,15 +35,14 @@ COPPA — Must get verifiable parental consent before collecting data from child
 async def call_ai(system_prompt: str, user_prompt: str) -> Optional[str]:
     """Call OpenAI GPT-4o-mini."""
     key = os.getenv("OPENAI_API_KEY", "")
-    if key and key != "your_key_here":
-        result = await _call_openai(system_prompt, user_prompt, key)
-        if result:
-            print("  ✓ AI response via OpenAI")
-            return result
-        else:
-            print("  ✗ OpenAI call failed")
-    else:
-        print("  ✗ No OPENAI_API_KEY set")
+    #if not key or key == "your_key_here":
+        #print("  ✗ No OPENAI_API_KEY set")
+        #return None
+    result = await _call_openai(system_prompt, user_prompt, key)
+    if result:
+        print("  ✓ AI response via OpenAI")
+        return result
+    print("  ✗ OpenAI call failed")
     return None
 
 
@@ -53,7 +52,10 @@ async def _call_openai(system: str, user: str, key: str) -> Optional[str]:
         async with httpx.AsyncClient(timeout=60.0) as client:
             resp = await client.post(
                 "https://api.openai.com/v1/chat/completions",
-                headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"},
+                headers={
+                    "Authorization": f"Bearer {key}",
+                    "Content-Type": "application/json",
+                },
                 json={
                     "model": "gpt-4o-mini",
                     "messages": [
@@ -62,7 +64,7 @@ async def _call_openai(system: str, user: str, key: str) -> Optional[str]:
                     ],
                     "temperature": 0.2,
                     "max_tokens": 4000,
-                }
+                },
             )
             data = resp.json()
             if "choices" in data and len(data["choices"]) > 0:
