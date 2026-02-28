@@ -144,38 +144,62 @@ async def crawl_website(url: str) -> CrawlResult:
             result.consent_banner = detect_consent_banner(soup, html)
 
             # ===== FIND PRIVACY POLICY =====
-            # Method 1: Look for link in the page
+            # Method 1: Look for link in the page HTML
             result.privacy_policy_url = find_privacy_policy_link(soup, url)
 
-            # Method 2: If no link found, try common paths
+            # Method 2: If no link found, brute-force common paths with GET (HEAD fails on many sites)
             if not result.privacy_policy_url:
                 base_url = f"{parsed.scheme}://{parsed.netloc}"
-                for path in COMMON_POLICY_PATHS:
+                extended_paths = COMMON_POLICY_PATHS + [
+                    f"/en-us/privacy",
+                    f"/en-gb/privacy",
+                    f"/us/legal/privacy",
+                    f"/help/privacy",
+                    f"/info/privacy",
+                    f"/pages/privacy",
+                    f"/privacy.html",
+                    f"/site/privacy",
+                    f"/{result.domain.split('.')[0]}/privacy",  # e.g. /depop/privacy
+                ]
+                for path in extended_paths:
                     try:
                         test_url = base_url + path
-                        pp_resp = await client.head(test_url)
-                        if pp_resp.status_code < 400:
-                            result.privacy_policy_url = test_url
-                            break
+                        pp_test = await client.get(test_url)
+                        if pp_test.status_code < 400:
+                            # Verify it's actually a privacy page, not a redirect to homepage
+                            test_text = pp_test.text.lower()
+                            if any(kw in test_text for kw in ["privacy policy", "privacy notice", "personal data", "personal information", "data protection", "we collect"]):
+                                result.privacy_policy_url = test_url
+                                break
                     except:
                         continue
 
-            # ===== FETCH PRIVACY POLICY =====
+            # ===== FETCH & PARSE PRIVACY POLICY =====
             if result.privacy_policy_url:
                 try:
                     pp_resp = await client.get(result.privacy_policy_url)
                     if pp_resp.status_code < 400:
                         pp_soup = BeautifulSoup(pp_resp.text, "html.parser")
-                        for tag in pp_soup(["script", "style", "nav", "header", "footer", "aside"]):
+                        for tag in pp_soup(["script", "style", "nav", "header", "footer", "aside", "noscript"]):
                             tag.decompose()
-                        text = pp_soup.get_text(separator="\n", strip=True)
-                        # Only use if it looks like actual policy text (not a redirect/error page)
-                        if len(text) > 200:
-                            result.privacy_policy_text = text[:15000]
+                        # Try to get the main content area first
+                        main = pp_soup.find("main") or pp_soup.find("article") or pp_soup.find(role="main") or pp_soup.find("div", class_=re.compile("content|body|main|policy|privacy", re.I))
+                        if main:
+                            text = main.get_text(separator="\n", strip=True)
                         else:
-                            result.errors.append("Privacy policy page found but contained very little text")
+                            text = pp_soup.get_text(separator="\n", strip=True)
+                        # Verify this is real policy text
+                        if len(text) > 300 and any(kw in text.lower() for kw in ["privacy", "personal data", "we collect", "information"]):
+                            result.privacy_policy_text = text[:15000]
+                        elif len(text) > 200:
+                            result.privacy_policy_text = text[:15000]
+                            result.errors.append("Privacy policy page found but text may be incomplete (JS-rendered site)")
+                        else:
+                            result.errors.append("Privacy policy URL found but page contained very little readable text — likely requires JavaScript to render")
                 except Exception as e:
                     result.errors.append(f"Could not fetch privacy policy: {str(e)}")
+            else:
+                result.errors.append("Could not automatically locate a privacy policy page. Use Advanced Options to paste the policy text manually.")
 
             # ===== ALSO CRAWL ONE MORE PAGE (e.g. /login or /signup) FOR MORE DATA =====
             try:
